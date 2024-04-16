@@ -30,8 +30,15 @@ end
 ---@param path string
 ---@return string
 local function safe_path(path)
-    local safepath = vim.fn.substitute(path, [=[\v([/\\]|^\w\zs:)\V]=], [[%]], 'g')
+    local safepath = vim.fn.substitute(path, [=[\v([/\\]|^\w\zs:)\V]=], [[%]], "g")
     return safepath
+end
+
+-- escapes special characters in vim.cmd strings
+---@param value string
+---@return string
+local function escape_cmd_string(value)
+    return vim.fn.substitute(value, "[%# ]", [[\\&]], "g")
 end
 
 local function is_absolute()
@@ -88,7 +95,7 @@ local function write_session_file(path)
         return
     end
     -- escape vim.cmd special characters
-    target_path = vim.fn.substitute(target_path, '[#% ]', [[\\&]], 'g')
+    target_path = escape_cmd_string(target_path)
     vim.cmd(string.format("mksession! %s", target_path))
 end
 
@@ -180,7 +187,7 @@ function M.load(path, opts)
     end
 
     -- escape vim.cmd special characters
-    path = vim.fn.substitute(path, '[#% ]', [[\\&]], 'g')
+    path =  escape_cmd_string(path)
     vim.cmd(string.format("silent! source %s", path))
 
     if opts.autosave then
