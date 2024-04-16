@@ -15,7 +15,7 @@ local M = {}
 -- directories if needed
 ---@param path string
 ---@return boolean
-local ensure_path = function(path)
+local function ensure_path(path)
     local dirname = vim.fs.dirname(path)
     local basename = vim.fs.basename(path)
     if dirname and not vim.fn.isdirectory(dirname) then
@@ -29,9 +29,14 @@ end
 -- converts a given filepath to a string safe to be used as a session filename
 ---@param path string
 ---@return string
-local safe_path = function(path)
-    local safepath, _ = vim.fn.substitute(path, [=[\v([/\\]|^\w\zs:)\V]=], "%", "g")
+local function safe_path(path)
+    local safepath = vim.fn.substitute(path, [=[\v([/\\]|^\w\zs:)\V]=], [[%]], 'g')
     return safepath
+end
+
+local function is_absolute()
+    local last_chars = config.session_filepath:sub(-2)
+    return last_chars == "//" or last_chars == "\\\\"
 end
 
 -- given a path (possibly empty or nil) returns the absolute session path or
@@ -40,23 +45,25 @@ end
 ---@param path string|nil
 ---@param ensure boolean|nil
 ---@return string|nil
-local get_session_path = function(path, ensure)
+local function get_session_path(path, ensure)
     if ensure == nil then
         ensure = true
     end
 
     if path and path ~= "" then
-        path = vim.fn.expand(vim.fn.fnamemodify(path, ":p"))
+        path = vim.fn.fnamemodify(path, ":p")
+        path = vim.fn.expand(path)
+        path = vim.fn.simplify(path)
     elseif config.session_filepath ~= "" then
         local session_filepath = vim.fn.fnamemodify(config.session_filepath, ":p")
-        local absolute = config.session_filepath:sub(-2) == "//" or config.session_filepath:sub(-2) == "\\\\"
-        if absolute then
+        if is_absolute() then
             local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":p")
-            path = session_filepath .. "/" .. safe_path(cwd) .. "session"
+            path = session_filepath .. safe_path(cwd) .. "session"
         else
             path = session_filepath
         end
         path = vim.fn.expand(path)
+        path = vim.fn.simplify(path)
     end
 
     if path and path ~= "" then
@@ -74,13 +81,26 @@ end
 local session_file_path = nil
 
 ---@param path? string
-local write_session_file = function(path)
+local function write_session_file(path)
     local target_path = path or session_file_path
+    if not target_path then
+        vim.notify("sessions.nvim: failed to save session file", levels.ERROR)
+        return
+    end
+    -- escape vim.cmd special characters
+    target_path = vim.fn.substitute(target_path, '[#% ]', [[\\\&]], 'g')
     vim.cmd(string.format("mksession! %s", target_path))
 end
 
 ---@param path string|nil
-local start_autosave_internal = function(path)
+local function start_autosave_internal(path)
+    session_file_path = get_session_path(path, false)
+
+    if not session_file_path then
+        vim.notify("sessions.nvim: failed to start autosave, config session_filepath is not defined", levels.ERROR)
+        return
+    end
+
     local augroup = vim.api.nvim_create_augroup("sessions.nvim", {})
     vim.api.nvim_create_autocmd(
         config.events,
@@ -90,19 +110,20 @@ local start_autosave_internal = function(path)
             callback = function() write_session_file() end,
         }
     )
-
-    session_file_path = get_session_path(path, false)
 end
 
 -- start autosaving changes to the session file
-M.start_autosave = function()
-    start_autosave_internal()
+---@param path string|nil
+function M.start_autosave(path)
+    start_autosave_internal(path)
 end
 
 -- stop autosaving changes to the session file
 ---@param opts table
-M.stop_autosave = function(opts)
-    if not session_file_path then return end
+function M.stop_autosave(opts)
+    if not session_file_path then
+        return
+    end
 
     opts = vim.tbl_deep_extend("force", {
         save = true,
@@ -122,7 +143,7 @@ end
 -- save or overwrite a session file to the given path
 ---@param path string|nil
 ---@param opts table
-M.save = function(path, opts)
+function M.save(path, opts)
     opts = vim.tbl_deep_extend("force", {
         autosave = true,
     }, opts)
@@ -144,7 +165,7 @@ end
 ---@param path string|nil
 ---@param opts table
 ---@return boolean
-M.load = function(path, opts)
+function M.load(path, opts)
     opts = vim.tbl_deep_extend("force", {
         autosave = true,
         silent = false,
@@ -169,11 +190,11 @@ end
 
 -- return true if currently recording a session
 ---@returns bool
-M.recording = function()
+function M.recording()
     return session_file_path ~= nil
 end
 
-M.setup = function(opts)
+function M.setup(opts)
     config = vim.tbl_deep_extend("force", config, opts)
 
     -- register commands
