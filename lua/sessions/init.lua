@@ -16,8 +16,8 @@ local M = {}
 ---@param path string
 ---@return boolean
 local ensure_path = function(path)
-    local dirname = vim.fn.dirname(path)
-    local basename = vim.fn.basename(path)
+    local dirname = vim.fs.dirname(path)
+    local basename = vim.fs.basename(path)
     if dirname and not vim.fn.isdirectory(dirname) then
         if not vim.fn.mkdir(dirname, "p") then
             return false
