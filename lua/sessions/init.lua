@@ -30,7 +30,7 @@ end
 ---@param path string
 ---@return string
 local safe_path = function(path)
-    local safepath, _ = path:gsub("[^a-zA-Z0-9._-]+", ".")
+    local safepath, _ = vim.fn.substitute(path, [=[\v([/\\]|^\w\zs:)\V]=], "%", "g")
     return safepath
 end
 
