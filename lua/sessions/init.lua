@@ -88,7 +88,7 @@ local function write_session_file(path)
         return
     end
     -- escape vim.cmd special characters
-    target_path = vim.fn.substitute(target_path, '[#% ]', [[\\\&]], 'g')
+    target_path = vim.fn.substitute(target_path, '[#% ]', [[\\&]], 'g')
     vim.cmd(string.format("mksession! %s", target_path))
 end
 
@@ -179,6 +179,8 @@ function M.load(path, opts)
         return false
     end
 
+    -- escape vim.cmd special characters
+    path = vim.fn.substitute(path, '[#% ]', [[\\&]], 'g')
     vim.cmd(string.format("silent! source %s", path))
 
     if opts.autosave then
