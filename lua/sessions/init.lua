@@ -187,8 +187,8 @@ function M.load(path, opts)
     end
 
     -- escape vim.cmd special characters
-    path =  escape_cmd_string(path)
-    vim.cmd(string.format("silent! source %s", path))
+    local target_path =  escape_cmd_string(path)
+    vim.cmd(string.format("silent! source %s", target_path))
 
     if opts.autosave then
         start_autosave_internal(path)
