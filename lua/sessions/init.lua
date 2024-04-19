@@ -34,13 +34,6 @@ local function safe_path(path)
     return safepath
 end
 
--- escapes special characters in vim.cmd strings
----@param value string
----@return string
-local function escape_cmd_string(value)
-    return vim.fn.substitute(value, "[%# ]", [[\\&]], "g")
-end
-
 local function is_absolute()
     local last_chars = config.session_filepath:sub(-2)
     return last_chars == "//" or last_chars == "\\\\"
@@ -95,7 +88,7 @@ local function write_session_file(path)
         return
     end
     -- escape vim.cmd special characters
-    target_path = escape_cmd_string(target_path)
+    target_path = vim.fn.fnameescape(target_path)
     vim.cmd(string.format("mksession! %s", target_path))
 end
 
@@ -187,7 +180,7 @@ function M.load(path, opts)
     end
 
     -- escape vim.cmd special characters
-    local target_path =  escape_cmd_string(path)
+    local target_path = vim.fn.fnameescape(path)
     vim.cmd(string.format("silent! source %s", target_path))
 
     if opts.autosave then
