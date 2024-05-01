@@ -18,8 +18,8 @@ local M = {}
 local function ensure_path(path)
     local dirname = vim.fs.dirname(path)
     local basename = vim.fs.basename(path)
-    if dirname and not vim.fn.isdirectory(dirname) then
-        if not vim.fn.mkdir(dirname, "p") then
+    if dirname and vim.fn.isdirectory(dirname) == 0 then
+        if vim.fn.mkdir(dirname, "p") == 0 then
             return false
         end
     end
