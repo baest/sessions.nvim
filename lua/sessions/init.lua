@@ -1,5 +1,4 @@
 local util = require("sessions.util")
-local lfs = require "lfs"
 
 local levels = vim.log.levels
 
@@ -37,17 +36,6 @@ local safe_path = function(path)
     end
 end
 
--- check if a directory exists
-local function directoryExists(path)
-    local baseDir = path:match("^(.+[/\\])")
-    if not baseDir then
-        return false
-    end
-
-    local attrs = lfs.attributes(baseDir)
-    return attrs and attrs.mode == "directory"
-end
-
 
 -- given a path (possibly empty or nil) returns the absolute session path or
 -- the default session path if it exists. Will create intermediate directories
@@ -58,24 +46,17 @@ end
 local function get_session_path(path, ensure)
     ensure = ensure or true
 
-    -- default path if abs=true, else curr dir
-    local defaultBasePath = config.absolute
-        and vim.fn.expand(config.session_filepath, ":p")
-        or vim.fn.fnamemodify(vim.fn.getcwd(), ":p") .. util.path.sep .. config.session_filepath
-
     if path and path ~= "" then
         local inputPath = vim.fn.expand(path, ":p")
-        local inputPathBaseDirExists = directoryExists(inputPath)
-
-        --   if path is full path (i.e., path starts with /), use as is
-        if string.sub(inputPath, 1, 1) == "/" and inputPathBaseDirExists then
-            return inputPath
-        end
 
         --   if path is relative (may or may not contain slashes), append to basepath
-        if defaultBasePath then
-            return defaultBasePath .. util.path.sep .. inputPath
+        path = config.session_filepath .. util.path.sep .. inputPath
+
+        if ensure then
+            ensure_path(path)
         end
+
+        return path
     end
     --
     --   if path is not provided:
@@ -189,6 +170,8 @@ end
 
 M.setup = function(opts)
     config = util.merge(config, opts)
+
+    config.session_filepath = vim.fn.expand(config.session_filepath, ":p")
 
     -- register commands
     vim.api.nvim_create_user_command(
